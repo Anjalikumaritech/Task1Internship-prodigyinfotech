@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Frontend Auth Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f4f9; margin:0; padding:0; }
+    .container { max-width: 500px; margin: 40px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+    h2 { text-align:center; }
+    input { width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:4px; }
+    button { padding:10px 15px; background:#2563eb; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+    button:hover { background:#1e4fd1; }
+    .error { color:red; font-size:0.9em; }
+    .hidden { display:none; }
+    .dashboard { text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="container" id="authBox">
+    <h2 id="formTitle">Register</h2>
+    <div>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password (min 6 chars)">
+      <div id="errorMsg" class="error"></div>
+      <button id="submitBtn">Register</button>
+      <p><a href="#" id="toggleLink">Already have an account? Login</a></p>
+    </div>
+  </div>
+
+  <div class="container hidden" id="dashboard">
+    <div class="dashboard">
+      <h2>Welcome, <span id="userEmail"></span></h2>
+      <p>You are now logged in. This is a protected area.</p>
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+<script>
+  const authBox = document.getElementById('authBox');
+  const dashboard = document.getElementById('dashboard');
+  const formTitle = document.getElementById('formTitle');
+  const toggleLink = document.getElementById('toggleLink');
+  const submitBtn = document.getElementById('submitBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  const userEmailSpan = document.getElementById('userEmail');
+
+  let isRegister = true;
+
+  // "Fake" hashing function for demo only
+  function fakeHash(str) {
+    return btoa(str).split("").reverse().join("");
+  }
+
+  function saveUser(email, password) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    if (users.find(u => u.email === email)) return false;
+    users.push({ email, password: fakeHash(password) });
+    localStorage.setItem('users', JSON.stringify(users));
+    return true;
+  }
+
+  function authenticateUser(email, password) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const hash = fakeHash(password);
+    return users.find(u => u.email === email && u.password === hash);
+  }
+
+  function showDashboard(email) {
+    authBox.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+    userEmailSpan.textContent = email;
+    localStorage.setItem('sessionUser', email);
+  }
+
+  function logout() {
+    localStorage.removeItem('sessionUser');
+    dashboard.classList.add('hidden');
+    authBox.classList.remove('hidden');
+  }
+
+  // Toggle between register/login
+  toggleLink.onclick = (e) => {
+    e.preventDefault();
+    isRegister = !isRegister;
+    formTitle.textContent = isRegister ? "Register" : "Login";
+    submitBtn.textContent = isRegister ? "Register" : "Login";
+    toggleLink.textContent = isRegister ? "Already have an account? Login" : "Don't have an account? Register";
+    errorMsg.textContent = "";
+  };
+
+  // Submit
+  submitBtn.onclick = () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) { errorMsg.textContent = "All fields required"; return; }
+    if (password.length < 6) { errorMsg.textContent = "Password must be at least 6 characters"; return; }
+
+    if (isRegister) {
+      if (saveUser(email, password)) {
+        errorMsg.textContent = "Registered successfully! Now login.";
+        toggleLink.click(); // switch to login
+      } else {
+        errorMsg.textContent = "User already exists";
+      }
+    } else {
+      if (authenticateUser(email, password)) {
+        showDashboard(email);
+      } else {
+        errorMsg.textContent = "Invalid credentials";
+      }
+    }
+  };
+
+  // Logout
+  document.getElementById('logoutBtn').onclick = logout;
+
+  // Auto-login if session exists
+  const sessionUser = localStorage.getItem('sessionUser');
+  if (sessionUser) showDashboard(sessionUser);
+</script>
+</body>
+</html>
